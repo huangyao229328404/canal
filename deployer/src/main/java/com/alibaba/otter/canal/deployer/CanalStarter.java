@@ -68,7 +68,7 @@ public class CanalStarter {
         } else if (serverMode.equalsIgnoreCase("rabbitmq")) {
             canalMQProducer = new CanalRabbitMQProducer();
         }
-
+        //根据canal.serverMode=配置的模式，如果是MQ的形式
         MQProperties mqProperties = null;
         if (canalMQProducer != null) {
             mqProperties = buildMQProperties(properties);

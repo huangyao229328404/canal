@@ -34,9 +34,12 @@ public class CanalLauncher {
     public static void main(String[] args) {
         try {
             logger.info("## set default uncaught exception handler");
+            //通过UncaughtExceptionHandler，用来捕获并处理在一个线程对象中抛出的未检测异常，以避免程序终止
+            //通俗的理解：setDefaultUncaughtExceptionHandler 相当于app全局的 catch ，用于捕获程序未捕获的异常
             setGlobalUncaughtExceptionHandler();
 
             logger.info("## load canal configurations");
+            //开始加载canal.properties配置文件的配置
             String conf = System.getProperty("canal.conf", "classpath:canal.properties");
             Properties properties = new Properties();
             if (conf.startsWith(CLASSPATH_URL_PREFIX)) {
@@ -59,6 +62,7 @@ public class CanalLauncher {
                 if (StringUtils.isEmpty(registerIp)) {
                     registerIp = AddressUtils.getHostIp();
                 }
+                //获取远程配置
                 final PlainCanalConfigClient configClient = new PlainCanalConfigClient(managerAddress,
                     user,
                     passwd,
@@ -73,8 +77,9 @@ public class CanalLauncher {
                                                        + "]");
                 }
                 Properties managerProperties = canalConfig.getProperties();
-                // merge local
+                // merge local，远程配置覆盖本地配置
                 managerProperties.putAll(properties);
+                //定时扫描远程的canal.properties配置，如果有修改则关闭应用，加载新的配置开启
                 int scanIntervalInSecond = Integer.valueOf(CanalController.getProperty(managerProperties,
                     CanalConstants.CANAL_AUTO_SCAN_INTERVAL,
                     "5"));

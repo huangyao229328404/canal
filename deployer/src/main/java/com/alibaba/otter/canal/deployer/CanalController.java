@@ -467,6 +467,7 @@ public class CanalController {
         String value = System.getProperty(key);
 
         if (value == null) {
+            //大多数操作系统使用环境变量，可以把配置信息传递给应用程序
             value = System.getenv(key);
         }
 
