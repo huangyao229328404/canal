@@ -137,6 +137,7 @@ public class CanalController {
         if (StringUtils.isEmpty(registerIp)) {
             registerIp = ip; // 兼容以前配置
         }
+        //不使用zk，使用单机zk，使用集群zk
         final String zkServers = getProperty(properties, CanalConstants.CANAL_ZKSERVERS);
         if (StringUtils.isNotEmpty(zkServers)) {
             zkclientx = ZkClientx.getZkClient(zkServers);
@@ -144,20 +145,21 @@ public class CanalController {
             zkclientx.createPersistent(ZookeeperPathUtils.DESTINATION_ROOT_NODE, true);
             zkclientx.createPersistent(ZookeeperPathUtils.CANAL_CLUSTER_ROOT_NODE, true);
         }
-
+        //CanalInstance运行状态监控；在zk中登记当前running的实例IP和端口，方便客户端获取
         final ServerRunningData serverData = new ServerRunningData(registerIp + ":" + port);
         ServerRunningMonitors.setServerData(serverData);
         ServerRunningMonitors.setRunningMonitors(MigrateMap.makeComputingMap(new Function<String, ServerRunningMonitor>() {
-
+            //此处为MigrateMap.makeComputingMap的特性，当get(destination)没有值时会触发该实现
             public ServerRunningMonitor apply(final String destination) {
                 ServerRunningMonitor runningMonitor = new ServerRunningMonitor(serverData);
                 runningMonitor.setDestination(destination);
                 runningMonitor.setListener(new ServerRunningListener() {
-
+                    //ServerRunningMonitor执行processActiveEnter时触发
                     public void processActiveEnter() {
                         try {
                             MDC.put(CanalConstants.MDC_DESTINATION, String.valueOf(destination));
                             embededCanalServer.start(destination);
+                            //开启了MQ中间件的投递则，启动对应实例的监听
                             if (canalMQStarter != null) {
                                 canalMQStarter.startDestination(destination);
                             }
@@ -165,7 +167,7 @@ public class CanalController {
                             MDC.remove(CanalConstants.MDC_DESTINATION);
                         }
                     }
-
+                    //ServerRunningMonitor执行processActiveExit时触发
                     public void processActiveExit() {
                         try {
                             MDC.put(CanalConstants.MDC_DESTINATION, String.valueOf(destination));
@@ -177,7 +179,7 @@ public class CanalController {
                             MDC.remove(CanalConstants.MDC_DESTINATION);
                         }
                     }
-
+                    //ServerRunningMonitor执行processStart时触发
                     public void processStart() {
                         try {
                             if (zkclientx != null) {
@@ -222,13 +224,13 @@ public class CanalController {
                 if (zkclientx != null) {
                     runningMonitor.setZkClient(zkclientx);
                 }
-                // 触发创建一下cid节点
+                // 触发创建一下cid节点,开启实例启动的抢占和运行的监听ServerRunningMonitor
                 runningMonitor.init();
                 return runningMonitor;
             }
         }));
 
-        // 初始化monitor机制
+        // 初始化monitor机制，autoScan机制相关代码，此处也是设置默认，真正的实在start()
         autoScan = BooleanUtils.toBoolean(getProperty(properties, CanalConstants.CANAL_AUTO_SCAN));
         if (autoScan) {
             defaultAction = new InstanceAction() {
@@ -242,8 +244,9 @@ public class CanalController {
                     }
 
                     if (!embededCanalServer.isStart(destination)) {
-                        // HA机制启动
+                        // HA机制启动,真正针对实例的配置启动moniter机制，即running节点抢占
                         ServerRunningMonitor runningMonitor = ServerRunningMonitors.getRunningMonitor(destination);
+                        //如果是lazy
                         if (!config.getLazy() && !runningMonitor.isStart()) {
                             runningMonitor.start();
                         }
@@ -372,7 +375,7 @@ public class CanalController {
         if (StringUtils.isNotEmpty(springXml)) {
             globalConfig.setSpringXml(springXml);
         }
-
+        //canal实例的生成器，根据实例Mode=spring或者manager来构建
         instanceGenerator = new CanalInstanceGenerator() {
 
             public CanalInstance generate(String destination) {
@@ -382,11 +385,13 @@ public class CanalController {
                 }
 
                 if (config.getMode().isManager()) {
+                    //spring.xml中的配置从远程admin中获取
                     PlainCanalInstanceGenerator instanceGenerator = new PlainCanalInstanceGenerator(properties);
                     instanceGenerator.setCanalConfigClient(managerClients.get(config.getManagerAddress()));
                     instanceGenerator.setSpringXml(config.getSpringXml());
                     return instanceGenerator.generate(destination);
                 } else if (config.getMode().isSpring()) {
+                    //从本地的canal.properties和instance.properties中获取spring.xml中的配置
                     SpringCanalInstanceGenerator instanceGenerator = new SpringCanalInstanceGenerator();
                     instanceGenerator.setSpringXml(config.getSpringXml());
                     return instanceGenerator.generate(destination);
@@ -406,10 +411,12 @@ public class CanalController {
     }
 
     private void initInstanceConfig(Properties properties) {
+        //获取canal.destinations=配置的实例，默认为example
         String destinationStr = getProperty(properties, CanalConstants.CANAL_DESTINATIONS);
         String[] destinations = StringUtils.split(destinationStr, CanalConstants.CANAL_DESTINATION_SPLIT);
-
+        //对每个实例进行对应的配置
         for (String destination : destinations) {
+            //首先加载全局的配置，即canal.properties，然后加载对应实例目录下的instance.properties如classpath:example/instance.properties覆盖全局
             InstanceConfig config = parseInstanceConfig(properties, destination);
             InstanceConfig oldConfig = instanceConfigs.put(destination, config);
 
@@ -482,8 +489,10 @@ public class CanalController {
         logger.info("## start the canal server[{}({}):{}]", ip, registerIp, port);
         // 创建整个canal的工作节点
         final String path = ZookeeperPathUtils.getCanalClusterNode(registerIp + ":" + port);
+        //非HA模式，不做任何处理，HA模式下即:抢占zk的临时节点，临时节点不存在则创建
         initCid(path);
         if (zkclientx != null) {
+            //HA模式下，监听会话，会话结束则重新进行临时节点的抢占
             this.zkclientx.subscribeStateChanges(new IZkStateListener() {
 
                 public void handleStateChanged(KeeperState state) throws Exception {
@@ -491,6 +500,7 @@ public class CanalController {
                 }
 
                 public void handleNewSession() throws Exception {
+                    //重新抢占
                     initCid(path);
                 }
 
@@ -529,7 +539,7 @@ public class CanalController {
             }
         }
 
-        // 启动网络接口
+        // 启动网络接口，即客户端连接的网络接口，端口默认11111
         if (canalServer != null) {
             canalServer.start();
         }

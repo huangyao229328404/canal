@@ -11,7 +11,9 @@ spring.datasource:
   username: canal
   password: canal
   driver-class-name: com.mysql.jdbc.Driver
-  url: jdbc:mysql://${spring.datasource.address}/${spring.datasource.database}?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+  #url: jdbc:mysql://${spring.datasource.address}/${spring.datasource.database}?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+  #解决运行报时区问题
+  url: jdbc:mysql://${spring.datasource.address}/${spring.datasource.database}?useUnicode=true&characterEncoding=UTF-8&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
   hikari:
     maximum-pool-size: 30
     minimum-idle: 1

@@ -39,7 +39,7 @@ public class CanalLauncher {
             setGlobalUncaughtExceptionHandler();
 
             logger.info("## load canal configurations");
-            //开始加载canal.properties配置文件的配置
+            //开始加载canal.properties配置文件的配置,可以通过-Dcanal.conf=形式外置配置文件
             String conf = System.getProperty("canal.conf", "classpath:canal.properties");
             Properties properties = new Properties();
             if (conf.startsWith(CLASSPATH_URL_PREFIX)) {
@@ -50,11 +50,14 @@ public class CanalLauncher {
             }
 
             final CanalStarter canalStater = new CanalStarter(properties);
+
+            //canal.properties中如果配置了canal.admin.manager=对应的canal-admin的ip:端口，则会从canal-admin获取远程配置，覆盖本地配置
             String managerAddress = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_MANAGER);
             if (StringUtils.isNotEmpty(managerAddress)) {
                 String user = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_USER);
                 String passwd = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_PASSWD);
                 String adminPort = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_PORT, "11110");
+                //是否自动注册
                 boolean autoRegister = BooleanUtils.toBoolean(CanalController.getProperty(properties,
                     CanalConstants.CANAL_ADMIN_AUTO_REGISTER));
                 String autoCluster = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_AUTO_CLUSTER);
@@ -118,6 +121,7 @@ public class CanalLauncher {
             }
 
             canalStater.start();
+            //在JVM未挂掉之前，此处一直未阻塞状态，见:com/alibaba/otter/canal/deployer/CanalStarter.java:103
             runningLatch.await();
             executor.shutdownNow();
         } catch (Throwable e) {

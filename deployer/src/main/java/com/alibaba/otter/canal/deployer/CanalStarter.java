@@ -99,6 +99,7 @@ public class CanalStarter {
             }
 
         };
+        //JVM挂了才会停止各个实例和实例的监控，继而通过CanalLauncher.runningLatch停掉CanalLauncher的main方法进程
         Runtime.getRuntime().addShutdownHook(shutdownThread);
 
         if (canalMQProducer != null) {
@@ -109,6 +110,7 @@ public class CanalStarter {
         }
 
         // start canalAdmin
+        //此处开启的是一个netty的服务端，用于canal-admin来管理该canal的入口，由adminUI来进行调用
         String port = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_PORT);
         if (canalAdmin == null && StringUtils.isNotEmpty(port)) {
             String user = CanalController.getProperty(properties, CanalConstants.CANAL_ADMIN_USER);
@@ -152,6 +154,7 @@ public class CanalStarter {
             controller = null;
         }
         if (shutdownThread != null) {
+            //主动停止，则删除钩子程序
             Runtime.getRuntime().removeShutdownHook(shutdownThread);
             shutdownThread = null;
         }

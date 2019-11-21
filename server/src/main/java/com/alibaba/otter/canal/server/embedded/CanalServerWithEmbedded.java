@@ -75,12 +75,12 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
     public void start() {
         if (!isStart()) {
             super.start();
-            // 如果存在provider,则启动metrics service
+            // 如果存在provider,则启动metrics service，使用SPI，实际上是启动了com.alibaba.otter.canal.prometheus.PrometheusProvider进行性能监控
             loadCanalMetrics();
             metrics.setServerPort(metricsPort);
             metrics.initialize();
             canalInstances = MigrateMap.makeComputingMap(new Function<String, CanalInstance>() {
-
+                //在CanalController.initGlobalConfig方法已经生成了一个默认的实例生成器canalInstanceGenerator，此处是覆盖默认的生成器
                 public CanalInstance apply(String destination) {
                     return canalInstanceGenerator.generate(destination);
                 }

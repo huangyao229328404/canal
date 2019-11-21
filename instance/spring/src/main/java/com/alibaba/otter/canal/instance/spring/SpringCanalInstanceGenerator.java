@@ -24,7 +24,7 @@ public class SpringCanalInstanceGenerator implements CanalInstanceGenerator {
     public CanalInstance generate(String destination) {
         synchronized (CanalInstanceGenerator.class) {
             try {
-                // 设置当前正在加载的通道，加载spring查找文件时会用到该变量
+                // 设置当前正在加载的通道，加载spring查找文件时会用到该变量，整个tomcat容器或JVM容器的共享变量
                 System.setProperty("canal.instance.destination", destination);
                 this.beanFactory = getBeanFactory(springXml);
                 String beanName = destination;
