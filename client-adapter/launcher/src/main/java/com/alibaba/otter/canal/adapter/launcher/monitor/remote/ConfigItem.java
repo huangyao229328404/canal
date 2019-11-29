@@ -9,10 +9,10 @@ package com.alibaba.otter.canal.adapter.launcher.monitor.remote;
 public class ConfigItem {
 
     private Long   id;
-    private String category;
-    private String name;
-    private String content;
-    private long   modifiedTime;
+    private String category;//适配器的类型，如rdb，Hbase等
+    private String name;//对应conf/适配器类型/xxx.yml中的xxx.yml
+    private String content;//配置内容
+    private long   modifiedTime;//最后修改时间，根据该字段获取变更
 
     public Long getId() {
         return id;

@@ -51,6 +51,7 @@ public class CanalAdapterLoader {
      * 初始化canal-client
      */
     public void init() {
+        //创建外部适配器的扩展加载器,相当于new XXX()
         loader = ExtensionLoader.getExtensionLoader(OuterAdapter.class);
 
         String canalServerHost = this.canalClientConfig.getCanalServerHost();
@@ -65,15 +66,19 @@ public class CanalAdapterLoader {
             // 初始化canal-client的适配器
             for (CanalClientConfig.CanalAdapter canalAdapter : canalClientConfig.getCanalAdapters()) {
                 List<List<OuterAdapter>> canalOuterAdapterGroups = new CopyOnWriteArrayList<>();
-
+                //一个canal适配器配置对应一个实例存在多个分组
                 for (CanalClientConfig.Group connectorGroup : canalAdapter.getGroups()) {
                     List<OuterAdapter> canalOutConnectors = new CopyOnWriteArrayList<>();
+                    //一个分组则对应多个类型的外部适配器
                     for (OuterAdapterConfig c : connectorGroup.getOuterAdapters()) {
+                        //根据外部适配器的配置，获取到当前canal实例的组内适配器列表(组内适配器是串行执行)
                         loadAdapter(c, canalOutConnectors);
                     }
+                    //组间适配器清单，组间适配器并行执行
                     canalOuterAdapterGroups.add(canalOutConnectors);
                 }
                 CanalAdapterWorker worker;
+                //使用zk集群时，canalServerHost不能配置，需要配置zookeeperHosts
                 if (sa != null) {
                     worker = new CanalAdapterWorker(canalClientConfig,
                         canalAdapter.getInstance(),
@@ -98,10 +103,12 @@ public class CanalAdapterLoader {
                     List<List<OuterAdapter>> canalOuterAdapterGroups = new CopyOnWriteArrayList<>();
                     List<OuterAdapter> canalOuterAdapters = new CopyOnWriteArrayList<>();
                     for (OuterAdapterConfig config : group.getOuterAdapters()) {
+                        //加载组内适配器
                         loadAdapter(config, canalOuterAdapters);
                     }
+                    //组间适配器清单
                     canalOuterAdapterGroups.add(canalOuterAdapters);
-
+                    //按分组来初始化适配器工作线程
                     CanalAdapterKafkaWorker canalKafkaWorker = new CanalAdapterKafkaWorker(canalClientConfig,
                         canalClientConfig.getMqServers(),
                         canalAdapter.getInstance(),
@@ -172,10 +179,11 @@ public class CanalAdapterLoader {
     private void loadAdapter(OuterAdapterConfig config, List<OuterAdapter> canalOutConnectors) {
         try {
             OuterAdapter adapter;
+            //获取配置的外部适配器,根据name-key进行获取，如:logger-,rdb-postgres1
             adapter = loader.getExtension(config.getName(), StringUtils.trimToEmpty(config.getKey()));
 
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            // 替换ClassLoader
+            // 替换ClassLoader,从上下文环境获取适配器的properties属性配置
             Thread.currentThread().setContextClassLoader(adapter.getClass().getClassLoader());
             Environment env = (Environment) SpringContext.getBean(Environment.class);
             Properties evnProperties = null;
@@ -193,6 +201,7 @@ public class CanalAdapterLoader {
                     }
                 }
             }
+            //初始化适配器
             adapter.init(config, evnProperties);
             Thread.currentThread().setContextClassLoader(cl);
             canalOutConnectors.add(adapter);

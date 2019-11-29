@@ -39,9 +39,27 @@ import com.alibaba.otter.canal.client.adapter.support.Util;
 public class RdbAdapter implements OuterAdapter {
 
     private static Logger                           logger              = LoggerFactory.getLogger(RdbAdapter.class);
-
+    /*
+    * key=文件名，value=MappingConfig
+    * 如:xxx.yml=MappingConfig映射实例
+    * */
     private Map<String, MappingConfig>              rdbMapping          = new ConcurrentHashMap<>();                // 文件名对应配置
+    /*
+     * 非镜像库(默认为非镜像库)
+     *        tcp模式:
+     *             key=canal实例名_database-table
+     *             value=文件名对应配置关系map
+     *
+     *        kafka,rabbitMQ,rocketMQ模式:
+     *             key=canal实例名-groupId_database-table
+     *             value=文件名对应配置关系map
+     */
     private Map<String, Map<String, MappingConfig>> mappingConfigCache  = new ConcurrentHashMap<>();                // 库名-表名对应配置
+    /*
+     * 镜像库(mirrorDb配置为true)：
+     *        key=canal实例名_database
+     *        value=MirrorDbConfig
+     */
     private Map<String, MirrorDbConfig>             mirrorDbConfigCache = new ConcurrentHashMap<>();                // 镜像库配置
 
     private DruidDataSource                         dataSource;
@@ -73,6 +91,7 @@ public class RdbAdapter implements OuterAdapter {
     @Override
     public void init(OuterAdapterConfig configuration, Properties envProperties) {
         this.envProperties = envProperties;
+        //1.加载文件名对应配置
         Map<String, MappingConfig> rdbMappingTmp = ConfigLoader.load(envProperties);
         // 过滤不匹配的key的配置
         rdbMappingTmp.forEach((key, mappingConfig) -> {
@@ -86,32 +105,37 @@ public class RdbAdapter implements OuterAdapter {
         if (rdbMapping.isEmpty()) {
             throw new RuntimeException("No rdb adapter found for config key: " + configuration.getKey());
         }
-
+        //2. 加载库名-表名对应配置
+        //3.加载镜像库配置
         for (Map.Entry<String, MappingConfig> entry : rdbMapping.entrySet()) {
             String configName = entry.getKey();
             MappingConfig mappingConfig = entry.getValue();
+            //不是镜像库
             if (!mappingConfig.getDbMapping().getMirrorDb()) {
                 String key;
+                //不是tpc模式的，如kafka，rabbitMQ,racketMQ模式，key=canal实例名-groupId_database-table
                 if (envProperties != null && !"tcp".equalsIgnoreCase(envProperties.getProperty("canal.conf.mode"))) {
                     key = StringUtils.trimToEmpty(mappingConfig.getDestination()) + "-"
                           + StringUtils.trimToEmpty(mappingConfig.getGroupId()) + "_"
                           + mappingConfig.getDbMapping().getDatabase() + "-" + mappingConfig.getDbMapping().getTable();
                 } else {
+                    //tcp模式，key=canal实例名_database-table
                     key = StringUtils.trimToEmpty(mappingConfig.getDestination()) + "_"
                           + mappingConfig.getDbMapping().getDatabase() + "-" + mappingConfig.getDbMapping().getTable();
                 }
+                //不存在则设置一个空map，然后往map中填值
                 Map<String, MappingConfig> configMap = mappingConfigCache.computeIfAbsent(key,
                     k1 -> new ConcurrentHashMap<>());
                 configMap.put(configName, mappingConfig);
             } else {
-                // mirrorDB
+                // mirrorDB，key=canal实例名.database
                 String key = StringUtils.trimToEmpty(mappingConfig.getDestination()) + "."
                              + mappingConfig.getDbMapping().getDatabase();
                 mirrorDbConfigCache.put(key, MirrorDbConfig.create(configName, mappingConfig));
             }
         }
 
-        // 初始化连接池
+        // 4.初始化连接池
         Map<String, String> properties = configuration.getProperties();
         dataSource = new DruidDataSource();
         dataSource.setDriverClassName(properties.get("jdbc.driverClassName"));
@@ -134,22 +158,25 @@ public class RdbAdapter implements OuterAdapter {
         } catch (SQLException e) {
             logger.error("ERROR ## failed to initial datasource: " + properties.get("jdbc.url"), e);
         }
-
+        //并行执行的线程数, 默认为1
         String threads = properties.get("threads");
         // String commitSize = properties.get("commitSize");
 
         boolean skipDupException = BooleanUtils.toBoolean(configuration.getProperties()
             .getOrDefault("skipDupException", "true"));
+
+        //初始化RDB同步操作业务服务
         rdbSyncService = new RdbSyncService(dataSource,
             threads != null ? Integer.valueOf(threads) : null,
             skipDupException);
 
+        //初始化RDB镜像库同步操作业务服务
         rdbMirrorDbSyncService = new RdbMirrorDbSyncService(mirrorDbConfigCache,
             dataSource,
             threads != null ? Integer.valueOf(threads) : null,
             rdbSyncService.getColumnsTypeCache(),
             skipDupException);
-
+        //开启对rdb配置文件的监控，监控目录/conf/rdb/xx.yml,其次为classpath:rdb/xx.yml
         rdbConfigMonitor = new RdbConfigMonitor();
         rdbConfigMonitor.init(configuration.getKey(), this, envProperties);
     }

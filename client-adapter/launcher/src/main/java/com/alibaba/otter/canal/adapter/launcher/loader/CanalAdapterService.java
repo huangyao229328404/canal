@@ -56,7 +56,9 @@ public class CanalAdapterService {
             syncSwitch.refresh();
             logger.info("## syncSwitch refreshed.");
             logger.info("## start the canal client adapters.");
+            //获取application.yml(Bootstrap启动加载之后)的配置
             adapterLoader = new CanalAdapterLoader(adapterCanalConfig);
+            //初始化加载适配器
             adapterLoader.init();
             running = true;
             logger.info("## the canal client adapters are running now ......");

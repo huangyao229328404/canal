@@ -29,7 +29,7 @@ public class ConfigLoader {
         logger.info("## Start loading rdb mapping config ... ");
 
         Map<String, MappingConfig> result = new LinkedHashMap<>();
-
+        //key=文件名，value=配置信息字符串
         Map<String, String> configContentMap = MappingConfigsLoader.loadConfigs("rdb");
         configContentMap.forEach((fileName, content) -> {
             MappingConfig config = YmlConfigBinder
@@ -38,6 +38,8 @@ public class ConfigLoader {
                 return;
             }
             try {
+                //镜像库--需要database
+                //非镜像库--需要database，table和目标表
                 config.validate();
             } catch (Exception e) {
                 throw new RuntimeException("ERROR Config: " + fileName + " " + e.getMessage(), e);

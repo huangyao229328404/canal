@@ -14,9 +14,11 @@ public class MappingConfigsLoader {
     public static Map<String, String> loadConfigs(String name) {
         Map<String, String> configContentMap = new HashMap<>();
 
-        // 先取本地文件，再取类路径
+        // 先取本地文件，再取类路径，
+        // 本地文件下的配置如: ../conf/rdb
         File configDir = new File(".." + File.separator + Constant.CONF_DIR + File.separator + name);
         if (!configDir.exists()) {
+            //类路径下的配置
             URL url = MappingConfigsLoader.class.getClassLoader().getResource("");
             if (url != null) {
                 configDir = new File(url.getPath() + name + File.separator);

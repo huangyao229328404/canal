@@ -144,7 +144,6 @@ public class BaseCanalClientTest {
                 }
 
                 EventType eventType = rowChage.getEventType();
-
                 logger.info(row_format,
                     new Object[] { entry.getHeader().getLogfileName(),
                             String.valueOf(entry.getHeader().getLogfileOffset()), entry.getHeader().getSchemaName(),

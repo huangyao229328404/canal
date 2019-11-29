@@ -47,9 +47,9 @@ public class RdbSyncService {
     private int                               threads = 3;
     private boolean                           skipDupException;
 
-    private List<SyncItem>[]                  dmlsPartition;
-    private BatchExecutor[]                   batchExecutors;
-    private ExecutorService[]                 executorThreads;
+    private List<SyncItem>[]                  dmlsPartition;//deml语句分隔器
+    private BatchExecutor[]                   batchExecutors;//批量执行器
+    private ExecutorService[]                 executorThreads;//
 
     public List<SyncItem>[] getDmlsPartition() {
         return dmlsPartition;
@@ -109,7 +109,7 @@ public class RdbSyncService {
                         // bypass
                         continue;
                     }
-
+                    //进行了pkhash则会开启threads个executorThreads线程执行单条dml同步
                     futures.add(executorThreads[i].submit(() -> {
                         try {
                             dmlsPartition[j].forEach(syncItem -> sync(batchExecutors[j],
@@ -124,7 +124,7 @@ public class RdbSyncService {
                         }
                     }));
                 }
-
+                //获取回调结果
                 futures.forEach(future -> {
                     try {
                         future.get();
@@ -152,48 +152,50 @@ public class RdbSyncService {
         sync(dmls, dml -> {
             if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())) {
                 // DDL
-            columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
-            return false;
-        } else {
-            // DML
-            String destination = StringUtils.trimToEmpty(dml.getDestination());
-            String groupId = StringUtils.trimToEmpty(dml.getGroupId());
-            String database = dml.getDatabase();
-            String table = dml.getTable();
-            Map<String, MappingConfig> configMap;
-            if (envProperties != null && !"tcp".equalsIgnoreCase(envProperties.getProperty("canal.conf.mode"))) {
-                configMap = mappingConfig.get(destination + "-" + groupId + "_" + database + "-" + table);
+                columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
+                return false;
             } else {
-                configMap = mappingConfig.get(destination + "_" + database + "-" + table);
-            }
-
-            if (configMap == null) {
-                return false;
-            }
-
-            if (configMap.values().isEmpty()) {
-                return false;
-            }
-
-            for (MappingConfig config : configMap.values()) {
-                if (config.getConcurrent()) {
-                    List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                    singleDmls.forEach(singleDml -> {
-                        int hash = pkHash(config.getDbMapping(), singleDml.getData());
-                        SyncItem syncItem = new SyncItem(config, singleDml);
-                        dmlsPartition[hash].add(syncItem);
-                    });
+                // DML
+                String destination = StringUtils.trimToEmpty(dml.getDestination());
+                String groupId = StringUtils.trimToEmpty(dml.getGroupId());
+                String database = dml.getDatabase();
+                String table = dml.getTable();
+                Map<String, MappingConfig> configMap;
+                if (envProperties != null && !"tcp".equalsIgnoreCase(envProperties.getProperty("canal.conf.mode"))) {
+                    configMap = mappingConfig.get(destination + "-" + groupId + "_" + database + "-" + table);
                 } else {
-                    int hash = 0;
-                    List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
-                    singleDmls.forEach(singleDml -> {
-                        SyncItem syncItem = new SyncItem(config, singleDml);
-                        dmlsPartition[hash].add(syncItem);
-                    });
+                    configMap = mappingConfig.get(destination + "_" + database + "-" + table);
                 }
+
+                if (configMap == null) {
+                    return false;
+                }
+
+                if (configMap.values().isEmpty()) {
+                    return false;
+                }
+
+                for (MappingConfig config : configMap.values()) {
+                    //根据主键进行并发处理，根据设置的线程数计算主键的hash值
+                    if (config.getConcurrent()) {
+                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                        singleDmls.forEach(singleDml -> {
+                            //设置的线程数计算主键的hash值
+                            int hash = pkHash(config.getDbMapping(), singleDml.getData());
+                            SyncItem syncItem = new SyncItem(config, singleDml);
+                            dmlsPartition[hash].add(syncItem);
+                        });
+                    } else {
+                        int hash = 0;
+                        List<SingleDml> singleDmls = SingleDml.dml2SingleDmls(dml);
+                        singleDmls.forEach(singleDml -> {
+                            SyncItem syncItem = new SyncItem(config, singleDml);
+                            dmlsPartition[hash].add(syncItem);
+                        });
+                    }
+                }
+                return true;
             }
-            return true;
-        }
     }   );
     }
 

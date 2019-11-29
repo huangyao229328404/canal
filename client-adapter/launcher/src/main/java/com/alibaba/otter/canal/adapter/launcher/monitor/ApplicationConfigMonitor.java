@@ -40,10 +40,12 @@ public class ApplicationConfigMonitor {
     public void init() {
         File confDir = Util.getConfDirPath();
         try {
+            //监听application.yml的变化，3秒定时执行
             FileAlterationObserver observer = new FileAlterationObserver(confDir,
                 FileFilterUtils.and(FileFilterUtils.fileFileFilter(),
                     FileFilterUtils.prefixFileFilter("application"),
                     FileFilterUtils.suffixFileFilter("yml")));
+            //监听器，一旦application.yml变化了，则重新加载，并刷新sprin容器配置
             FileListener listener = new FileListener();
             observer.addListener(listener);
             fileMonitor = new FileAlterationMonitor(3000, observer);

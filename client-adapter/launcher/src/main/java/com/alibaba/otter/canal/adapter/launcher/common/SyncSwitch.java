@@ -208,12 +208,12 @@ public class SyncSwitch {
         if (mode == Mode.LOCAL) {
             BooleanMutex mutex = LOCAL_LOCK.get(destination);
             if (mutex != null) {
-                mutex.get();
+                mutex.get();//当前状态为true, 不会被阻塞//当前状态为false, 会被阻塞直到另一个线程调用mutex.set(true);
             }
         } else {
             BooleanMutex mutex = DISTRIBUTED_LOCK.get(destination);
             if (mutex != null) {
-                mutex.get();
+                mutex.get();//当前状态为true, 不会被阻塞//当前状态为false, 会被阻塞直到另一个线程调用mutex.set(true);
             }
         }
     }

@@ -38,7 +38,8 @@ public class CanalAdapterWorker extends AbstractCanalAdapterWorker {
         super(canalOuterAdapters);
         this.canalClientConfig = canalClientConfig;
         this.canalDestination = canalDestination;
-        connector = CanalConnectors.newSingleConnector(address, canalDestination, "", "");
+        //此处用户密码默认为空，意味着canal的instance.properties的canal.instance.dbUsername=canal和canal.instance.dbPassword=canal需配置为空
+        connector = CanalConnectors.newSingleConnector(address, canalDestination, "canal", "canal");
     }
 
     /**

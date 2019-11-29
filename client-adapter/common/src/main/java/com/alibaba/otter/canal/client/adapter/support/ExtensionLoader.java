@@ -71,14 +71,16 @@ public class ExtensionLoader<T> {
     @SuppressWarnings("unchecked")
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type, String classLoaderPolicy) {
         if (type == null) throw new IllegalArgumentException("Extension type == null");
+        //传入的class需要是接口
         if (!type.isInterface()) {
             throw new IllegalArgumentException("Extension type(" + type + ") is not interface!");
         }
+        //需要为@SPI注释的接口
         if (!withExtensionAnnotation(type)) {
             throw new IllegalArgumentException("Extension type(" + type + ") is not extension, because WITHOUT @"
                                                + SPI.class.getSimpleName() + " Annotation!");
         }
-
+        //进行内存缓存
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type, classLoaderPolicy));
@@ -95,7 +97,7 @@ public class ExtensionLoader<T> {
     /**
      * 返回指定名字的扩展
      *
-     * @param name
+     * @param name es6,rdb
      * @return
      */
     @SuppressWarnings("unchecked")
@@ -104,6 +106,7 @@ public class ExtensionLoader<T> {
         if ("true".equals(name)) {
             return getDefaultExtension();
         }
+
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
             cachedInstances.putIfAbsent(name, new Holder<>());
@@ -245,9 +248,17 @@ public class ExtensionLoader<T> {
         return null;
     }
 
+    /**
+     * 加载适配器插件的类与key的对应关系
+     * 插件路径:client-adapter/launcher/target/canal-adapter/plugin
+     * 结构: 例子es6=ES6xAdapter.class
+     * @return
+     */
     private Map<String, Class<?>> loadExtensionClasses() {
+        //接口上的@SPI("logger")标识默认为logger
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
         if (defaultAnnotation != null) {
+            //不支持默认多个外部适配器
             String value = defaultAnnotation.value();
             if ((value = value.trim()).length() > 0) {
                 String[] names = NAME_SEPARATOR.split(value);
@@ -262,6 +273,7 @@ public class ExtensionLoader<T> {
         Map<String, Class<?>> extensionClasses = new HashMap<String, Class<?>>();
 
         // 1. plugin folder，customized extension classLoader （jar_dir/plugin）
+        // 1. 从插件文件目录将所有的插件jar加载进来，通过spi的形式(spi的配置文件为ETA-INF/canal/和ETA-INF/services)
         String dir = File.separator + this.getJarDirectoryPath() + File.separator + "plugin";
 
         File externalLibDir = new File(dir);
@@ -289,8 +301,11 @@ public class ExtensionLoader<T> {
                     } else {
                         localClassLoader = new URLClassLoader(new URL[] { url }, parent);
                     }
-
+                    /*将指定目录下的插件进行加载，获取到对应的适配器
+                       key=对应适配器名，如es6,rdb,value=对应适配器的实现类*/
+                    //META-INF/canal/目录下的spi配置
                     loadFile(extensionClasses, CANAL_DIRECTORY, localClassLoader);
+                    //META-INF/services/目录下的spi配置
                     loadFile(extensionClasses, SERVICES_DIRECTORY, localClassLoader);
                 }
             }
@@ -304,6 +319,13 @@ public class ExtensionLoader<T> {
         return extensionClasses;
     }
 
+    /**
+     * 将指定目录下的插件进行加载，获取到对应的适配器
+     * key=对应适配器名，如es6,rdb,value=对应适配器的实现类
+     * @param extensionClasses
+     * @param dir
+     * @param classLoader
+     */
     private void loadFile(Map<String, Class<?>> extensionClasses, String dir, ClassLoader classLoader) {
         String fileName = dir + type.getName();
         try {
@@ -359,6 +381,7 @@ public class ExtensionLoader<T> {
                                                             if (c == null) {
                                                                 extensionClasses.put(n, clazz);
                                                             } else if (c != clazz) {
+                                                                //适配器名重复则报错
                                                                 cachedNames.remove(clazz);
                                                                 throw new IllegalStateException(
                                                                     "Duplicate extension " + type.getName() + " name "

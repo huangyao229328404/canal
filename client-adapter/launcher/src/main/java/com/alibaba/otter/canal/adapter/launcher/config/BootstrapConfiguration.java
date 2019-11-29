@@ -26,7 +26,9 @@ public class BootstrapConfiguration {
     public void loadRemoteConfig() {
         remoteConfigLoader = RemoteConfigLoaderFactory.getRemoteConfigLoader(env);
         if (remoteConfigLoader != null) {
+            //加载远程配置application.yml
             remoteConfigLoader.loadRemoteConfig();
+            //加载远程的对应实例库表列配置如conf/rdb/example.yml,conf/es6/example.yml
             remoteConfigLoader.loadRemoteAdapterConfigs();
             remoteConfigLoader.startMonitor(); // 启动监听
         }
