@@ -28,6 +28,7 @@ import com.alibaba.otter.canal.client.adapter.support.EtlResult;
 import com.alibaba.otter.canal.client.adapter.support.OuterAdapterConfig;
 import com.alibaba.otter.canal.client.adapter.support.SPI;
 import com.alibaba.otter.canal.client.adapter.support.Util;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * RDB适配器实现类
@@ -149,6 +150,8 @@ public class RdbAdapter implements OuterAdapter {
         dataSource.setTimeBetweenEvictionRunsMillis(60000);
         dataSource.setMinEvictableIdleTimeMillis(300000);
         dataSource.setUseUnfairLock(true);
+        //hy 修改事务隔离级别为RC
+        dataSource.setDefaultTransactionIsolation(Isolation.READ_COMMITTED.value());
         // List<String> array = new ArrayList<>();
         // array.add("set names utf8mb4;");
         // dataSource.setConnectionInitSqls(array);

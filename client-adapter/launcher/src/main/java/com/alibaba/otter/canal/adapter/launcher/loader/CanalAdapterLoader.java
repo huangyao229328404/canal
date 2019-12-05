@@ -246,4 +246,6 @@ public class CanalAdapterLoader {
         }
         logger.info("All canal adapters destroyed");
     }
+
+
 }

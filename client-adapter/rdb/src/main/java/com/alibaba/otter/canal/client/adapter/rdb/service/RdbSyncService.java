@@ -150,7 +150,8 @@ public class RdbSyncService {
      */
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls, Properties envProperties) {
         sync(dmls, dml -> {
-            if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())) {
+            //hy  添加TRUNCATE操作同步处理
+            if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())&& !"TRUNCATE".equalsIgnoreCase(dml.getType())) {
                 // DDL
                 columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
                 return false;
@@ -455,6 +456,7 @@ public class RdbSyncService {
                 throw new RuntimeException("Target column: " + targetColumnName + " not matched");
             }
             // 如果有修改主键的情况
+            //如果修改了主键，那么旧的主键值将存在于old数据，所以从old数据中取
             if (o != null && o.containsKey(srcColumnName)) {
                 BatchExecutor.setValue(values, type, o.get(srcColumnName));
             } else {

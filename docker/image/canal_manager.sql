@@ -10,14 +10,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `canal_adapter_config`;
 CREATE TABLE `canal_adapter_config` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `category` varchar(45) NOT NULL,
-  `name` varchar(45) NOT NULL,
-  `status` varchar(45) DEFAULT NULL,
-  `content` text NOT NULL,
-  `modified_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+   `id` bigint(20) NOT NULL AUTO_INCREMENT,
+   `category` varchar(45) NOT NULL COMMENT '适配器的类型，如rdb，Hbase等',
+   `name` varchar(45) NOT NULL COMMENT '对应conf/适配器类型/xxx.yml中的文件名xxx.yml',
+   `status` varchar(45) DEFAULT NULL,
+   `content` text NOT NULL COMMENT '配置内容',
+   `modified_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP  ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间，根据该字段获取变更',
+   PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 -- ----------------------------
 -- Table structure for canal_cluster
@@ -39,9 +39,9 @@ CREATE TABLE `canal_config` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `cluster_id` bigint(20) DEFAULT NULL,
   `server_id` bigint(20) DEFAULT NULL,
-  `name` varchar(45) NOT NULL,
+  `name` varchar(45) NOT NULL COMMENT 'id=2的需对应application.yml',
   `status` varchar(45) DEFAULT NULL,
-  `content` text NOT NULL,
+  `content` text NOT NULL COMMENT '配置内容',
   `content_md5` varchar(128) NOT NULL,
   `modified_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
