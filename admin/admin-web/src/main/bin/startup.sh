@@ -23,6 +23,7 @@ if [ ! -d $base/logs ] ; then
 fi
 
 ## set java path
+JAVA=/app/soft/jdk1.8.0_131/bin/java
 if [ -z "$JAVA" ] ; then
   JAVA=$(which java)
 fi

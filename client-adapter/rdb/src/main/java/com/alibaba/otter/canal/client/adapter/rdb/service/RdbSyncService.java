@@ -150,8 +150,8 @@ public class RdbSyncService {
      */
     public void sync(Map<String, Map<String, MappingConfig>> mappingConfig, List<Dml> dmls, Properties envProperties) {
         sync(dmls, dml -> {
-            //hy  添加TRUNCATE操作同步处理
-            if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())&& !"TRUNCATE".equalsIgnoreCase(dml.getType())) {
+            //hy  添加TRUNCATE操作同步处理--此处不能添加，如果为多个src同步到一个tar，其中一个src执行了truncate table，tar将会被清空
+            if (dml.getIsDdl() != null && dml.getIsDdl() && StringUtils.isNotEmpty(dml.getSql())/*&& !"TRUNCATE".equalsIgnoreCase(dml.getType())*/) {
                 // DDL
                 columnsTypeCache.remove(dml.getDestination() + "." + dml.getDatabase() + "." + dml.getTable());
                 return false;

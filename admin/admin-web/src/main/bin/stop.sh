@@ -15,7 +15,8 @@ get_pid() {
 	STR=$1
 	PID=$2
     if $cygwin; then
-        JAVA_CMD="$JAVA_HOME\bin\java"
+        #JAVA_CMD="$JAVA_HOME\bin\java"
+        JAVA_CMD="/app/soft/jdk1.8.0_131/bin/java"
         JAVA_CMD=`cygpath --path --unix $JAVA_CMD`
         JAVA_PID=`ps |grep $JAVA_CMD |awk '{print $1}'`
     else

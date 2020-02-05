@@ -7,12 +7,13 @@ spring:
     default-property-inclusion: non_null
 
 canal.conf:
-  mode: tcp # kafka rocketMQ
-  canalServerHost: 172.18.100.41:11111
-#  zookeeperHosts: slave1:2181
+  mode: tcp # kafka rocketMQ rabbitMQ 对应配置
+  canalServerHost: 172.18.100.41:11111 #对应单机模式下的canal server的ip:port
+#  zookeeperHosts: slave1:2181   #对应集群模式下的zk地址, 如果配置了canalServerHost, 则以canalServerHost为准
+  #
 #  mqServers: 127.0.0.1:9092 #or rocketmq
   #是否已flatMessage模式传输,只适用于mq模式
-#  flatMessage: true
+#  flatMessage: true  # 扁平message开关, 是否以json字符串形式投递数据, 仅在kafka/rocketMQ模式下有效
   #批大小
   batchSize: 500
   #同步分批提交大小,分批次进行同步，一批同步数量为syncBatchSize配置的1000
@@ -24,11 +25,12 @@ canal.conf:
   # aliyun ak/sk
   accessKey:
   secretKey:
-  ##rabbitmq 账号密码
+  ##rabbitmq模式  rabbitmq 账号密码
   username:
   password:
   #rabbitmq vhost 默认 /
   vhost:
+  # 只是为了进行全量同步
   srcDataSources:
     defaultDS:
       url: jdbc:mysql://172.18.100.57:3306/pcloud_test?useUnicode=true
@@ -36,19 +38,19 @@ canal.conf:
       password: canal
   canalAdapters:
     - instance: 57test # canal instance Name or mq topic name
-      groups:  #组间适配器并行运行
-        - groupId: g1 #对应MQ模式下的groupId, 只会同步对应groupId的数据
-          outerAdapters: # 组内适配器串行运行，尽量不要配置组内适配器
-            - name: logger
-            - name: rdb                                               # 指定为rdb类型同步
-              key: postgres1                                            # 指定adapter的唯一key, 与表映射配置中outerAdapterKey对应
-              properties:
-                jdbc.driverClassName: org.postgresql.Driver        # jdbc驱动名, 部分jdbc的jar包需要自行放致lib目录下
-                jdbc.url: jdbc:postgresql://172.18.100.39:5432/pcloud?currentSchema=pcloud        # jdbc url
-                jdbc.username: postgres                                # jdbc username
-                jdbc.password: postgres                                # jdbc password
-                threads: 5                                            # 并行执行的线程数, 默认为1
-                skipDupException: true
+      groups:  # 对应适配器分组, 分组间的适配器并行运行
+#        - groupId: g1 #对应MQ模式下的groupId, 只会同步对应groupId的数据
+#          outerAdapters: # 适配器列表, 分组内的适配串行运行，尽量不要配置组内适配器
+#            - name: logger    #适配器SPI名
+#            - name: rdb                                               # 适配器SPI名,指定为rdb类型同步
+#              key: postgres1                                            # 指定adapter的唯一key, 与表映射配置中outerAdapterKey对应
+#              properties:
+#                jdbc.driverClassName: org.postgresql.Driver        # jdbc驱动名, 部分jdbc的jar包需要自行放致lib目录下
+#                jdbc.url: jdbc:postgresql://172.18.100.39:5432/pcloud?currentSchema=pcloud        # jdbc url
+#                jdbc.username: postgres                                # jdbc username
+#                jdbc.password: postgres                                # jdbc password
+#                threads: 5                                            # 并行执行的线程数, 默认为1
+#                skipDupException: true
         - groupId: g2 #对应MQ模式下的groupId, 只会同步对应groupId的数据
           outerAdapters: # 组内适配器串行运行，尽量不要配置组内适配器
             - name: logger

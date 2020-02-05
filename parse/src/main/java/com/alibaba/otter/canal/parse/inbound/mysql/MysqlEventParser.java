@@ -492,6 +492,7 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
                     boolean case2 = (standbyInfo == null || standbyInfo.getAddress() == null)
                                     && logPosition.getPostion().getServerId() != null
                                     && !logPosition.getPostion().getServerId().equals(findServerId(mysqlConnection));
+                    //不存在standby的库，
                     if (case2) {
                         long timestamp = logPosition.getPostion().getTimestamp();
                         long newStartTimestamp = timestamp - fallbackIntervalInSeconds * 1000;

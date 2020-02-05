@@ -13,6 +13,7 @@
 	<import resource="classpath:spring/base-instance.xml" />
 
 	<bean id="instance" class="com.alibaba.otter.canal.instance.spring.CanalInstanceWithSpring">
+		<!--程序中通过系统参数进行配置-System.setProperty("canal.instance.destination", destination);-->
 		<property name="destination" value="${canal.instance.destination}" />
 		<property name="eventParser">
 			<ref local="eventParser" />

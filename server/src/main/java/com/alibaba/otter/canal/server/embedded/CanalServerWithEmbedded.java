@@ -423,6 +423,7 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
 
         CanalInstance canalInstance = canalInstances.get(clientIdentity.getDestination());
         PositionRange<LogPosition> positionRanges = null;
+        //注意，客户端是按批次去binlog 数据，一个batchId可能对应多条binlog数据，由服务端根据batchId确定最终ack的位点是什么
         positionRanges = canalInstance.getMetaManager().removeBatch(clientIdentity, batchId); // 更新位置
         if (positionRanges == null) { // 说明是重复的ack/rollback
             throw new CanalServerException(String.format("ack error , clientId:%s batchId:%d is not exist , please check",

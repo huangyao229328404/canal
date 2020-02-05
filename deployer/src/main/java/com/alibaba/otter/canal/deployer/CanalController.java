@@ -364,6 +364,7 @@ public class CanalController {
         String managerAddress = getProperty(properties,
             CanalConstants.getInstanceManagerAddressKey(CanalConstants.GLOBAL_NAME));
         if (StringUtils.isNotEmpty(managerAddress)) {
+            //全局的canal.instance.global.manager.address可以配置为${canal.admin.manager}，用于取canal.admin.manager的配置值
             if (StringUtils.equals(managerAddress, "${canal.admin.manager}")) {
                 managerAddress = adminManagerAddress;
             }

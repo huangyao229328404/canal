@@ -9,15 +9,15 @@ dbMapping:
   table: tborder
   targetTable: pcloud.tborder
   targetPk: #如果是复合主键可以换行映射多个
-    orderid: orderid
+    orderid: orderId
   mapAll: true  # 是否整表映射, 要求源表和目标表字段名一模一样 (如果targetColumns也配置了映射,则以targetColumns配置为准)
-  targetColumns:                # 字段映射, 格式: 目标表字段: 源表字段, 如果字段名一样源表字段名可不填
-    orderId: orderid
-    personId: personid
-    createTime: createtime
+  targetColumns:                # 字段映射, 格式: 目标表字段: 源表字段, 如果字段名一样源表字段名可不填,但目标字典名还是必须填
+    orderid: orderId
+    personid: personId
+    createtime: createTime
     payment: payment
     mark: mark
-#  etlCondition: "where c_time>={}"
+  etlCondition: "where createTime>={}"
 #  commitBatch: 3000 # 批量提交的大小
 #  导入的类型以目标表的元类型为准, 将自动进行类型转换
 
